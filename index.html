@@ -5,13 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tamudigito Brawl Stars</title>
     <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        const SUPABASE_URL = 'https://gvixmvafzouvvbeowlfk.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_7XyqVDOpSJ-G3AvRqymAaw_ut4dSEPB';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        window.sb = supabase;
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
@@ -1698,19 +1692,27 @@
             return 'בקרוב';
         }
 
-        // Initialize
-        initData();
-        initParticles();
-        renderNews();
-        renderLottery();
-        renderLotteryBanner();
-        renderAbout();
-        renderHeroImage();
+        // Initialize Supabase and start app
+        function startApp() {
+            const SUPABASE_URL = 'https://gvixmvafzouvvbeowlfk.supabase.co';
+            const SUPABASE_KEY = 'sb_publishable_7XyqVDOpSJ-G3AvRqymAaw_ut4dSEPB';
+            window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Check if admin is logged in
-        if (localStorage.getItem('tamudigito_admin_logged') === 'true') {
-            document.getElementById('admin-login').classList.add('hidden');
-            document.getElementById('admin-dashboard').classList.remove('hidden');
+            initData();
+            initParticles();
+
+            // Check if admin is logged in
+            if (localStorage.getItem('tamudigito_admin_logged') === 'true') {
+                document.getElementById('admin-login').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+            }
+        }
+
+        // Wait for DOM + SDK to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startApp);
+        } else {
+            startApp();
         }
     </script>
 </body>
