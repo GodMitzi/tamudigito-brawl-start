@@ -385,9 +385,9 @@
             <!-- Admin Tabs (if logged in) -->
             <div id="admin-dashboard" class="hidden">
                 <div class="flex gap-2 mb-6 flex-wrap">
-                    <button onclick="showAdminTab('news')" class="admin-tab-btn px-4 py-2 rounded-lg bg-purple-accent text-white font-bold text-sm">חדשות</button>
-                    <button onclick="showAdminTab('lottery')" class="admin-tab-btn px-4 py-2 rounded-lg bg-bg-dark border border-border-dark text-text-muted font-bold text-sm hover:border-purple-accent">הגרלות</button>
-                    <button onclick="showAdminTab('about')" class="admin-tab-btn px-4 py-2 rounded-lg bg-bg-dark border border-border-dark text-text-muted font-bold text-sm hover:border-purple-accent">עוד מ Tamudigito</button>
+                    <button onclick="showAdminTab('news', event)" class="admin-tab-btn px-4 py-2 rounded-lg bg-purple-accent text-white font-bold text-sm">חדשות</button>
+                    <button onclick="showAdminTab('lottery', event)" class="admin-tab-btn px-4 py-2 rounded-lg bg-bg-dark border border-border-dark text-text-muted font-bold text-sm hover:border-purple-accent">הגרלות</button>
+                    <button onclick="showAdminTab('about', event)" class="admin-tab-btn px-4 py-2 rounded-lg bg-bg-dark border border-border-dark text-text-muted font-bold text-sm hover:border-purple-accent">עוד מ Tamudigito</button>
                     <button onclick="logoutAdmin()" class="ml-auto px-4 py-2 rounded-lg bg-red-600/20 text-red-400 font-bold text-sm hover:bg-red-600/30">התנתק</button>
                 </div>
 
@@ -1156,23 +1156,32 @@
             showPage('home');
         }
 
-        function showAdminTab(tab) {
-            document.querySelectorAll('.admin-tab-btn').forEach(btn => {
-                btn.classList.remove('bg-purple-accent', 'bg-orange-accent', 'text-white');
-                btn.classList.add('bg-bg-dark', 'border', 'border-border-dark', 'text-text-muted');
-            });
-            
-            const btn = event.target;
-            if (tab === 'about') {
-                btn.classList.add('bg-orange-accent', 'text-white');
-            } else {
-                btn.classList.add('bg-purple-accent', 'text-white');
+        function showAdminTab(tab, evt) {
+            const btns = document.querySelectorAll('.admin-tab-btn');
+            if (btns.length > 0) {
+                btns.forEach(btn => {
+                    btn.classList.remove('bg-purple-accent', 'bg-orange-accent', 'text-white');
+                    btn.classList.add('bg-bg-dark', 'border', 'border-border-dark', 'text-text-muted');
+                });
             }
-            btn.classList.remove('bg-bg-dark', 'border', 'border-border-dark', 'text-text-muted');
+            
+            const btn = evt ? evt.target : document.querySelector('.admin-tab-btn');
+            if (btn) {
+                if (tab === 'about') {
+                    btn.classList.add('bg-orange-accent', 'text-white');
+                } else {
+                    btn.classList.add('bg-purple-accent', 'text-white');
+                }
+                btn.classList.remove('bg-bg-dark', 'border', 'border-border-dark', 'text-text-muted');
+            }
 
-            document.getElementById('admin-news-tab').classList.add('hidden');
-            document.getElementById('admin-lottery-tab').classList.add('hidden');
-            document.getElementById('admin-about-tab').classList.add('hidden');
+            const newsTab = document.getElementById('admin-news-tab');
+            const lotteryTab = document.getElementById('admin-lottery-tab');
+            const aboutTab = document.getElementById('admin-about-tab');
+            
+            if (newsTab) newsTab.classList.add('hidden');
+            if (lotteryTab) lotteryTab.classList.add('hidden');
+            if (aboutTab) aboutTab.classList.add('hidden');
             
             if (tab === 'news') {
                 document.getElementById('admin-news-tab').classList.remove('hidden');
@@ -1239,6 +1248,7 @@
             const image_url = document.getElementById('news-image').value;
 
             const submitBtn = e.target.querySelector('button[type="submit"]');
+            if (!submitBtn) return;
             const originalText = submitBtn.textContent;
             submitBtn.textContent = 'שומר...';
             submitBtn.disabled = true;
@@ -1365,6 +1375,7 @@
             const image_url = document.getElementById('lottery-image').value;
 
             const submitBtn = e.target.querySelector('button[type="submit"]');
+            if (!submitBtn) return;
             const originalText = submitBtn.textContent;
             submitBtn.textContent = 'שומר...';
             submitBtn.disabled = true;
@@ -1675,6 +1686,7 @@
             const image_url = document.getElementById('about-image').value;
 
             const submitBtn = e.target.querySelector('button[type="submit"]');
+            if (!submitBtn) return;
             const originalText = submitBtn.textContent;
             submitBtn.textContent = 'שומר...';
             submitBtn.disabled = true;
