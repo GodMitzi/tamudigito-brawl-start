@@ -721,39 +721,72 @@
         }
 
         async function uploadImageToStorage(file, path) {
-            const { data, error } = await window.sb.storage
-                .from('images')
-                .upload(path, file, { upsert: true });
-            if (error) throw error;
-            const { data: urlData } = window.sb.storage
-                .from('images')
-                .getPublicUrl(path);
-            return urlData.publicUrl;
+            try {
+                const { data, error } = await window.sb.storage
+                    .from('images')
+                    .upload(path, file, { upsert: true });
+                
+                if (error) {
+                    console.error('Storage upload error:', error);
+                    throw new Error(error.message || 'Upload failed');
+                }
+                
+                const { data: urlData } = window.sb.storage
+                    .from('images')
+                    .getPublicUrl(path);
+                    
+                return urlData.publicUrl;
+            } catch (err) {
+                console.error('Full upload error:', err);
+                throw err;
+            }
         }
 
         async function handleHeroImageUpload(input) {
             const file = input.files[0];
             if (!file) return;
+            
+            const btn = document.getElementById('hero-upload-btn');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>';
+            btn.disabled = true;
+            
             try {
                 const imageUrl = await uploadImageToStorage(file, `hero/${Date.now()}_${file.name}`);
-                await window.sb.from('settings').upsert({ key: 'hero_image', value: imageUrl }, { onConflict: 'key' });
+                const { error } = await window.sb.from('settings').upsert({ key: 'hero_image', value: imageUrl }, { onConflict: 'key' });
+                if (error) throw error;
                 await fetchHero();
+                alert('התמונה הועלתה בהצלחה!');
             } catch (error) {
-                console.error('Error uploading image:', error);
-                alert('שגיאה בהעלאת התמונה');
+                console.error('Error uploading hero image:', error);
+                alert('שגיאה בהעלאת התמונה: ' + (error.message || 'בדוק שה-storage bucket קיים עם RLS נכון'));
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
             }
         }
 
         async function handleAdminHeroUpload(input) {
             const file = input.files[0];
             if (!file) return;
+            
+            const label = input.parentElement;
+            const originalText = label.innerHTML;
+            label.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> מעלה...';
+            label.disabled = true;
+            
             try {
                 const imageUrl = await uploadImageToStorage(file, `hero/${Date.now()}_${file.name}`);
-                await window.sb.from('settings').upsert({ key: 'hero_image', value: imageUrl }, { onConflict: 'key' });
+                const { error } = await window.sb.from('settings').upsert({ key: 'hero_image', value: imageUrl }, { onConflict: 'key' });
+                if (error) throw error;
                 await fetchHero();
+                alert('התמונה הועלתה בהצלחה!');
             } catch (error) {
-                console.error('Error uploading image:', error);
-                alert('שגיאה בהעלאת התמונה');
+                console.error('Error uploading admin hero image:', error);
+                alert('שגיאה בהעלאת התמונה: ' + (error.message || 'בדוק שה-storage bucket קיים עם RLS נכון'));
+            } finally {
+                label.innerHTML = originalText;
+                label.disabled = false;
             }
         }
 
@@ -1205,29 +1238,50 @@
             const description = document.getElementById('news-description').value;
             const image_url = document.getElementById('news-image').value;
 
-            // Check if there's a file to upload
-            const fileInput = document.querySelector('#news-form input[type="file"]');
-            let finalImageUrl = image_url;
-            if (fileInput && fileInput.files[0]) {
-                finalImageUrl = await uploadImageToStorage(fileInput.files[0], `news/${Date.now()}_${fileInput.files[0].name}`);
-            }
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'שומר...';
+            submitBtn.disabled = true;
 
-            if (id) {
-                await window.sb.from('news').update({ title, description, image_url: finalImageUrl, created_at: new Date().toISOString() }).eq('id', id);
-            } else {
-                await window.sb.from('news').insert({ title, description, image_url: finalImageUrl, created_at: new Date().toISOString() });
-            }
+            try {
+                const fileInput = document.querySelector('#news-form input[type="file"]');
+                let finalImageUrl = image_url;
+                if (fileInput && fileInput.files[0]) {
+                    finalImageUrl = await uploadImageToStorage(fileInput.files[0], `news/${Date.now()}_${fileInput.files[0].name}`);
+                }
 
-            hideNewsForm();
-            await fetchNews();
-            renderAdminNewsList();
+                if (id) {
+                    const { error } = await window.sb.from('news').update({ title, description, image_url: finalImageUrl, created_at: new Date().toISOString() }).eq('id', id);
+                    if (error) throw error;
+                } else {
+                    const { error } = await window.sb.from('news').insert({ title, description, image_url: finalImageUrl, created_at: new Date().toISOString() });
+                    if (error) throw error;
+                }
+
+                hideNewsForm();
+                await fetchNews();
+                renderAdminNewsList();
+                alert('החדשות נשמרו בהצלחה!');
+            } catch (error) {
+                console.error('Error saving news:', error);
+                alert('שגיאה בשמירת החדשות:\n' + (error.message || error.code || 'בדוק שטבלת ה-news קיימת ב-Supabase'));
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
         }
 
         async function deleteNews(id) {
             if (confirm('למחוק?')) {
-                await window.sb.from('news').delete().eq('id', id);
-                await fetchNews();
-                renderAdminNewsList();
+                try {
+                    const { error } = await window.sb.from('news').delete().eq('id', id);
+                    if (error) throw error;
+                    await fetchNews();
+                    renderAdminNewsList();
+                } catch (error) {
+                    console.error('Error deleting news:', error);
+                    alert('שגיאה במחיקה: ' + error.message);
+                }
             }
         }
 
@@ -1310,38 +1364,61 @@
             const end_date = new Date(document.getElementById('lottery-end').value).toISOString();
             const image_url = document.getElementById('lottery-image').value;
 
-            const fileInput = document.querySelector('#lottery-form input[type="file"]');
-            let finalImageUrl = image_url;
-            if (fileInput && fileInput.files[0]) {
-                finalImageUrl = await uploadImageToStorage(fileInput.files[0], `lottery/${Date.now()}_${fileInput.files[0].name}`);
-            }
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'שומר...';
+            submitBtn.disabled = true;
 
-            // Deactivate all existing lotteries first
-            await window.sb.from('lottery').update({ is_active: false }).eq('is_active', true);
-
-            const existingId = document.getElementById('lottery-edit-id').value;
-            if (existingId) {
-                await window.sb.from('lottery').update({ prize_name, description, end_date, image_url: finalImageUrl, is_active: true }).eq('id', existingId);
-            } else {
-                await window.sb.from('lottery').insert({ prize_name, description, end_date, image_url: finalImageUrl, is_active: true, created_at: new Date().toISOString() });
-            }
-
-            hideLotteryForm();
-            hideEnrollments();
-            document.getElementById('winner-panel').classList.add('hidden');
-            await fetchLottery();
-            renderAdminLotteryList();
-        }
-
-        async function deleteLottery() {
-            if (confirm('למחוק את ההגרלה?')) {
-                if (lotteryData) {
-                    await window.sb.from('lottery').delete().eq('id', lotteryData.id);
+            try {
+                const fileInput = document.querySelector('#lottery-form input[type="file"]');
+                let finalImageUrl = image_url;
+                if (fileInput && fileInput.files[0]) {
+                    finalImageUrl = await uploadImageToStorage(fileInput.files[0], `lottery/${Date.now()}_${fileInput.files[0].name}`);
                 }
+
+                // Deactivate all existing lotteries first
+                const { error: deactivateError } = await window.sb.from('lottery').update({ is_active: false }).eq('is_active', true);
+                if (deactivateError) console.log('No existing lotteries to deactivate');
+
+                const existingId = document.getElementById('lottery-edit-id').value;
+                if (existingId) {
+                    const { error } = await window.sb.from('lottery').update({ prize_name, description, end_date, image_url: finalImageUrl, is_active: true }).eq('id', existingId);
+                    if (error) throw error;
+                } else {
+                    const { error } = await window.sb.from('lottery').insert({ prize_name, description, end_date, image_url: finalImageUrl, is_active: true, created_at: new Date().toISOString() });
+                    if (error) throw error;
+                }
+
+                hideLotteryForm();
                 hideEnrollments();
                 document.getElementById('winner-panel').classList.add('hidden');
                 await fetchLottery();
                 renderAdminLotteryList();
+                alert('ההגרלה נשמרה בהצלחה!');
+            } catch (error) {
+                console.error('Error saving lottery:', error);
+                alert('שגיאה בשמירת ההגרלה: ' + (error.message || 'בדוק שטבלת ה-lottery קיימת ב-Supabase'));
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+
+        async function deleteLottery() {
+            if (confirm('למחוק את ההגרלה?')) {
+                try {
+                    if (lotteryData) {
+                        const { error } = await window.sb.from('lottery').delete().eq('id', lotteryData.id);
+                        if (error) throw error;
+                    }
+                    hideEnrollments();
+                    document.getElementById('winner-panel').classList.add('hidden');
+                    await fetchLottery();
+                    renderAdminLotteryList();
+                } catch (error) {
+                    console.error('Error deleting lottery:', error);
+                    alert('שגיאה במחיקה: ' + error.message);
+                }
             }
         }
 
@@ -1597,28 +1674,50 @@
             const app = document.getElementById('about-app').value;
             const image_url = document.getElementById('about-image').value;
 
-            const fileInput = document.querySelector('#about-form input[type="file"]');
-            let finalImageUrl = image_url;
-            if (fileInput && fileInput.files[0]) {
-                finalImageUrl = await uploadImageToStorage(fileInput.files[0], `about/${Date.now()}_${fileInput.files[0].name}`);
-            }
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'שומר...';
+            submitBtn.disabled = true;
 
-            if (id) {
-                await window.sb.from('about').update({ title, description, link, app, image_url: finalImageUrl }).eq('id', id);
-            } else {
-                await window.sb.from('about').insert({ title, description, link, app, image_url: finalImageUrl, created_at: new Date().toISOString() });
-            }
+            try {
+                const fileInput = document.querySelector('#about-form input[type="file"]');
+                let finalImageUrl = image_url;
+                if (fileInput && fileInput.files[0]) {
+                    finalImageUrl = await uploadImageToStorage(fileInput.files[0], `about/${Date.now()}_${fileInput.files[0].name}`);
+                }
 
-            hideAboutForm();
-            await fetchAbout();
-            renderAdminAboutList();
+                if (id) {
+                    const { error } = await window.sb.from('about').update({ title, description, link, app, image_url: finalImageUrl }).eq('id', id);
+                    if (error) throw error;
+                } else {
+                    const { error } = await window.sb.from('about').insert({ title, description, link, app, image_url: finalImageUrl, created_at: new Date().toISOString() });
+                    if (error) throw error;
+                }
+
+                hideAboutForm();
+                await fetchAbout();
+                renderAdminAboutList();
+                alert('הפריט נשמר בהצלחה!');
+            } catch (error) {
+                console.error('Error saving about:', error);
+                alert('שגיאה בשמירה: ' + (error.message || 'בדוק שטבלת ה-about קיימת ב-Supabase'));
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
         }
 
         async function deleteAbout(id) {
             if (confirm('למחוק?')) {
-                await window.sb.from('about').delete().eq('id', id);
-                await fetchAbout();
-                renderAdminAboutList();
+                try {
+                    const { error } = await window.sb.from('about').delete().eq('id', id);
+                    if (error) throw error;
+                    await fetchAbout();
+                    renderAdminAboutList();
+                } catch (error) {
+                    console.error('Error deleting about:', error);
+                    alert('שגיאה במחיקה: ' + error.message);
+                }
             }
         }
 
@@ -1656,6 +1755,11 @@
         async function handleImageUpload(input, targetId) {
             const file = input.files[0];
             if (!file) return;
+            
+            const label = input.parentElement;
+            const originalText = label.innerHTML;
+            label.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> מעלה...';
+            
             try {
                 const url = await uploadImageToStorage(file, `uploads/${Date.now()}_${file.name}`);
                 document.getElementById(targetId).value = url;
@@ -1666,8 +1770,10 @@
                     previewContainer.classList.remove('hidden');
                 }
             } catch(e) {
-                alert('שגיאה בהעלאת התמונה');
-                console.error(e);
+                console.error('Image upload error:', e);
+                alert('שגיאה בהעלאת התמונה: ' + (e.message || 'בדוק שה-storage bucket קיים'));
+            } finally {
+                label.innerHTML = originalText;
             }
         }
 
@@ -1695,8 +1801,29 @@
         // Initialize Supabase and start app
         function startApp() {
             const SUPABASE_URL = 'https://gvixmvafzouvvbeowlfk.supabase.co';
-            const SUPABASE_KEY = 'sb_publishable_7XyqVDOpSJ-G3AvRqymAaw_ut4dSEPB';
+            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2aXhtdmFmem91dnZiZW93bGZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NjU1NjEsImV4cCI6MjA4OTI0MTU2MX0.pZdDR9CEEFzQI67t8LhhR9c0V7OR8dJyD2hgeJwyyto';
+            
             window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+            // Test connection and show feedback
+            window.sb.from('news').select('*').limit(1).then(({ error }) => {
+                if (error) {
+                    console.error('Supabase connection error:', error);
+                    const newsGrid = document.getElementById('news-grid');
+                    if (newsGrid) {
+                        newsGrid.innerHTML = `
+                            <div class="col-span-3 text-center py-12 px-4">
+                                <div class="text-red-400 mb-2 text-lg font-bold">שגיאת חיבור לדאטאבייס</div>
+                                <p class="text-text-muted text-sm mb-4">${error.message}</p>
+                                <div class="text-text-muted text-xs bg-bg-dark p-3 rounded text-right" dir="ltr">
+                                    Code: ${error.code || 'N/A'}<br>
+                                    Details: ${error.details || 'N/A'}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            });
 
             initData();
             initParticles();
