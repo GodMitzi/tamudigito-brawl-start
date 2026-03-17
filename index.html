@@ -1203,10 +1203,10 @@
                 document.getElementById('news-title').value = news.title;
                 document.getElementById('news-description').value = news.description;
                 document.getElementById('news-image').value = news.image_url || '';
-                if (news.image_url) {
+                if (news.image_url && preview) {
                     preview.querySelector('img').src = news.image_url;
                     preview.classList.remove('hidden');
-                } else {
+                } else if (preview) {
                     preview.classList.add('hidden');
                 }
             } else {
@@ -1215,7 +1215,7 @@
                 document.getElementById('news-title').value = '';
                 document.getElementById('news-description').value = '';
                 document.getElementById('news-image').value = '';
-                preview.classList.add('hidden');
+                if (preview) preview.classList.add('hidden');
             }
         }
 
@@ -1327,12 +1327,12 @@
                 document.getElementById('lottery-edit-id').value = lottery.id;
                 document.getElementById('lottery-prize').value = lottery.prize_name;
                 document.getElementById('lottery-desc').value = lottery.description;
-                document.getElementById('lottery-end').value = lottery.end_date.slice(0, 16);
+                document.getElementById('lottery-end').value = lottery.end_date ? lottery.end_date.slice(0, 16) : '';
                 document.getElementById('lottery-image').value = lottery.image_url || '';
-                if (lottery.image_url) {
+                if (lottery.image_url && preview) {
                     preview.querySelector('img').src = lottery.image_url;
                     preview.classList.remove('hidden');
-                } else {
+                } else if (preview) {
                     preview.classList.add('hidden');
                 }
             } else {
@@ -1342,7 +1342,7 @@
                 document.getElementById('lottery-desc').value = '';
                 document.getElementById('lottery-end').value = '';
                 document.getElementById('lottery-image').value = '';
-                preview.classList.add('hidden');
+                if (preview) preview.classList.add('hidden');
             }
         }
 
@@ -1630,15 +1630,15 @@
             if (aboutItem) {
                 title.textContent = 'עדכן פריט';
                 document.getElementById('about-edit-id').value = aboutItem.id;
-                document.getElementById('about-title').value = aboutItem.title;
-                document.getElementById('about-description').value = aboutItem.description;
+                document.getElementById('about-title').value = aboutItem.title || '';
+                document.getElementById('about-description').value = aboutItem.description || '';
                 document.getElementById('about-link').value = aboutItem.link || '';
                 document.getElementById('about-app').value = aboutItem.app || '';
                 document.getElementById('about-image').value = aboutItem.image_url || '';
-                if (aboutItem.image_url) {
+                if (aboutItem.image_url && preview) {
                     preview.querySelector('img').src = aboutItem.image_url;
                     preview.classList.remove('hidden');
-                } else {
+                } else if (preview) {
                     preview.classList.add('hidden');
                 }
             } else {
@@ -1649,7 +1649,7 @@
                 document.getElementById('about-link').value = '';
                 document.getElementById('about-app').value = '';
                 document.getElementById('about-image').value = '';
-                preview.classList.add('hidden');
+                if (preview) preview.classList.add('hidden');
             }
         }
 
@@ -1762,12 +1762,17 @@
             
             try {
                 const url = await uploadImageToStorage(file, `uploads/${Date.now()}_${file.name}`);
-                document.getElementById(targetId).value = url;
+                const targetEl = document.getElementById(targetId);
+                if (targetEl) targetEl.value = url;
                 // Show preview
-                const previewContainer = input.closest('form').querySelector('[id$="-image-preview"]');
+                const formEl = input.closest('form');
+                const previewContainer = formEl ? formEl.querySelector('[id$="-image-preview"]') : null;
                 if (previewContainer) {
-                    previewContainer.querySelector('img').src = url;
-                    previewContainer.classList.remove('hidden');
+                    const img = previewContainer.querySelector('img');
+                    if (img) {
+                        img.src = url;
+                        previewContainer.classList.remove('hidden');
+                    }
                 }
             } catch(e) {
                 console.error('Image upload error:', e);
