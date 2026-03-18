@@ -561,6 +561,22 @@
         </section>
     </div>
 
+    <!-- News Modal -->
+    <div id="news-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeNewsModal()"></div>
+        <div class="relative flex items-center justify-center min-h-screen p-4">
+            <div class="relative bg-bg-dark border border-border-dark rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl">
+                <button onclick="closeNewsModal()" class="absolute top-4 left-4 z-10 w-10 h-10 rounded-full bg-bg-darker/80 hover:bg-bg-darker flex items-center justify-center text-text-muted hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+                <div id="news-modal-content" class="overflow-y-auto max-h-[90vh]">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="relative bg-bg-darker mt-20 overflow-hidden scanlines">
         <div class="absolute top-0 left-0 right-0 h-16 bg-bg-darker" style="clip-path: polygon(0 0, 100% 0, 100% 30%, 0 100%);"></div>
@@ -930,7 +946,7 @@
             }
 
             grid.innerHTML = news.map((item, index) => `
-                <div class="group relative overflow-hidden rounded-xl bg-bg-dark border border-border-dark hover:border-purple-accent/50 transition-all duration-300" style="animation-delay: ${index * 0.1}s;">
+                <div class="group relative overflow-hidden rounded-xl bg-bg-dark border border-border-dark hover:border-purple-accent/50 transition-all duration-300 cursor-pointer" style="animation-delay: ${index * 0.1}s;" onclick="openNewsModal(${item.id})">
                     <div class="relative h-48 overflow-hidden">
                         ${item.image_url ? 
                             `<img src="${item.image_url}" alt="${item.title}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">` :
@@ -950,6 +966,10 @@
                                 </div>
                                 <h3 class="font-extrabold text-lg text-F1F5F9 mb-2 leading-tight" style="font-family: 'Inter', sans-serif">${item.title}</h3>
                                 <p class="text-text-muted text-sm line-clamp-3 leading-relaxed" style="font-family: 'Inter', sans-serif">${item.description}</p>
+                                <div class="mt-3 text-purple-accent text-sm font-bold flex items-center gap-1">
+                                    <span>קרא עוד</span>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1052,9 +1072,9 @@
                         <div id="lottery-enroll-form">
                             <h3 class="text-xl font-extrabold text-F1F5F9 mb-6 text-center">הרשמה להגרלה</h3>
                             <form onsubmit="enrollInLottery(event)" class="max-w-md mx-auto space-y-4">
-                                <input type="text" id="enroll-name" placeholder="השם שלך" class="w-full bg-bg-dark border border-border-dark text-F1F5F9 placeholder-text-muted/60 rounded-lg px-4 py-3 text-base focus:border-purple-accent focus:outline-none" dir="rtl" required style="font-family: 'Inter', sans-serif">
-                                <input type="tel" id="enroll-phone" placeholder="מספר טלפון" class="w-full bg-bg-dark border border-border-dark text-F1F5F9 placeholder-text-muted/60 rounded-lg px-4 py-3 text-base focus:border-purple-accent focus:outline-none" dir="ltr" required style="font-family: 'Inter', sans-serif">
-                                <div id="enroll-error" class="hidden flex items-center gap-2 text-red-400 text-sm"></div>
+                                <input type="text" id="enroll-name" name="name" placeholder="השם שלך" class="w-full bg-bg-dark border border-border-dark text-F1F5F9 placeholder-text-muted/60 rounded-lg px-4 py-3 text-base focus:border-purple-accent focus:outline-none" dir="rtl" required autocomplete="name" style="font-family: 'Inter', sans-serif">
+                                <input type="tel" id="enroll-phone" name="phone" placeholder="מספר טלפון" class="w-full bg-bg-dark border border-border-dark text-F1F5F9 placeholder-text-muted/60 rounded-lg px-4 py-3 text-base focus:border-purple-accent focus:outline-none" dir="ltr" required autocomplete="tel" style="font-family: 'Inter', sans-serif">
+                                <div id="enroll-error" class="hidden items-center gap-2 text-red-400 text-sm"></div>
                                 <button type="submit" class="w-full h-14 bg-purple-accent hover:bg-purple-700 text-white font-extrabold text-lg rounded-xl glow-purple flex items-center justify-center gap-2">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
                                     הרשמה להגרלה
@@ -1814,6 +1834,51 @@
             if (hours > 0) return `בעוד ${hours} שעות`;
             return 'בקרוב';
         }
+
+        // News Modal Functions
+        function openNewsModal(newsId) {
+            const news = getNews();
+            const item = news.find(n => n.id === newsId);
+            if (!item) return;
+
+            const modal = document.getElementById('news-modal');
+            const content = document.getElementById('news-modal-content');
+
+            content.innerHTML = `
+                <div class="relative">
+                    ${item.image_url ? `
+                        <div class="relative w-full h-64 sm:h-80 overflow-hidden">
+                            <img src="${item.image_url}" alt="${item.title}" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-gradient-to-t from-bg-dark via-bg-dark/20 to-transparent"></div>
+                        </div>
+                    ` : ''}
+                    <div class="p-6 sm:p-8 ${!item.image_url ? 'pt-8' : ''}">
+                        <div class="flex items-center gap-2 text-text-muted text-sm mb-4">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span style="font-family: 'Inter', sans-serif">${formatDate(item.created_at)}</span>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-F1F5F9 mb-4" style="font-family: 'Inter', sans-serif">${item.title}</h2>
+                        <p class="text-text-muted text-base leading-relaxed whitespace-pre-wrap" style="font-family: 'Inter', sans-serif">${item.description}</p>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeNewsModal() {
+            const modal = document.getElementById('news-modal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeNewsModal();
+            }
+        });
 
         // Initialize Supabase and start app
         function startApp() {
