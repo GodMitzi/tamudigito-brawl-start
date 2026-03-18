@@ -1014,9 +1014,29 @@
             }
         }
 
+        function saveLotteryFormState() {
+            const nameInput = document.getElementById('enroll-name');
+            const phoneInput = document.getElementById('enroll-phone');
+            return {
+                name: nameInput ? nameInput.value : '',
+                phone: phoneInput ? phoneInput.value : '',
+                hasUserInput: nameInput && nameInput.value.length > 0 || phoneInput && phoneInput.value.length > 0
+            };
+        }
+
+        function restoreLotteryFormState(state) {
+            if (!state.hasUserInput) return;
+            const nameInput = document.getElementById('enroll-name');
+            const phoneInput = document.getElementById('enroll-phone');
+            if (nameInput && state.name) nameInput.value = state.name;
+            if (phoneInput && state.phone) phoneInput.value = state.phone;
+        }
+
         async function renderLottery() {
             const lottery = getLottery();
             const container = document.getElementById('lottery-content');
+            const previousState = saveLotteryFormState();
+            const previousLotteryId = container.dataset.lotteryId;
             
             if (!lottery || loadingState.lottery) {
                 container.innerHTML = '<div class="flex justify-center py-16"><div class="w-8 h-8 border-4 border-purple-accent border-t-transparent rounded-full animate-spin"></div></div>';
@@ -1035,7 +1055,7 @@
             }
 
             const enrollmentsCount = await getEnrollmentsCount();
-
+            
             container.innerHTML = `
                 <div class="relative overflow-hidden rounded-2xl bg-gradient-to-b from-purple-accent/10 via-bg-dark to-bg-dark border border-purple-accent/30">
                     <div class="relative p-6 sm:p-10">
@@ -1054,7 +1074,7 @@
                                     ${lottery.prize_name}
                                 </h2>
                                 <p class="text-text-muted text-base mb-4 leading-relaxed" style="font-family: 'Inter', sans-serif">${lottery.description}</p>
-                                <div class="flex items-center justify-center sm:justify-start gap-6 text-sm">
+                                <div class="flex flex-wrap items-center justify-center sm:justify-start gap-6 text-sm">
                                     <div class="flex items-center gap-2 text-text-muted" style="font-family: 'Inter', sans-serif">
                                         <svg class="w-4 h-4 text-purple-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                         <span>מסתיימת ${formatDate(lottery.end_date)}</span>
@@ -1084,6 +1104,9 @@
                     </div>
                 </div>
             `;
+            
+            container.dataset.lotteryId = lottery.id;
+            restoreLotteryFormState(previousState);
         }
 
         async function enrollInLottery(e) {
