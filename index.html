@@ -1074,7 +1074,7 @@
                             <form onsubmit="enrollInLottery(event)" class="max-w-md mx-auto space-y-4">
                                 <input type="text" id="enroll-name" name="name" placeholder="השם שלך" class="w-full bg-bg-dark border border-border-dark text-F1F5F9 placeholder-text-muted/60 rounded-lg px-4 py-3 text-base focus:border-purple-accent focus:outline-none" dir="rtl" required autocomplete="name" style="font-family: 'Inter', sans-serif">
                                 <input type="tel" id="enroll-phone" name="phone" placeholder="מספר טלפון" class="w-full bg-bg-dark border border-border-dark text-F1F5F9 placeholder-text-muted/60 rounded-lg px-4 py-3 text-base focus:border-purple-accent focus:outline-none" dir="ltr" required autocomplete="tel" style="font-family: 'Inter', sans-serif">
-                                <div id="enroll-error" class="hidden items-center gap-2 text-red-400 text-sm"></div>
+                                <div id="enroll-error" class="hidden flex items-center gap-2 text-red-400 text-sm bg-red-400/10 rounded-lg p-3"></div>
                                 <button type="submit" class="w-full h-14 bg-purple-accent hover:bg-purple-700 text-white font-extrabold text-lg rounded-xl glow-purple flex items-center justify-center gap-2">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
                                     הרשמה להגרלה
@@ -1088,6 +1088,9 @@
 
         async function enrollInLottery(e) {
             e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalBtnContent = submitBtn.innerHTML;
+            
             const name = document.getElementById('enroll-name').value.trim();
             const phone = document.getElementById('enroll-phone').value.trim();
             const errorDiv = document.getElementById('enroll-error');
@@ -1095,50 +1098,108 @@
             errorDiv.classList.add('hidden');
             errorDiv.innerHTML = '';
             
-            if (!name || !phone) {
-                errorDiv.classList.remove('hidden');
-                errorDiv.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>יש למלא את כל השדות';
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>';
+            
+            if (!name) {
+                showError(errorDiv, 'יש להזין שם');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
                 return;
             }
             
-            if (phone.length < 9) {
-                errorDiv.classList.remove('hidden');
-                errorDiv.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>מספר טלפון לא תקין';
+            if (name.length < 2) {
+                showError(errorDiv, 'השם חייב להכיל לפחות 2 תווים');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
+                return;
+            }
+            
+            const cleanPhone = phone.replace(/\D/g, '');
+            
+            if (!phone || cleanPhone.length === 0) {
+                showError(errorDiv, 'יש להזין מספר טלפון');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
+                return;
+            }
+            
+            if (cleanPhone.length !== 10) {
+                showError(errorDiv, 'מספר טלפון חייב להכיל בדיוק 10 ספרות');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
+                return;
+            }
+            
+            const validPrefixes = ['050', '051', '052', '053', '054', '055', '056', '057', '058', '02', '03', '04', '08', '09', '072', '073', '074', '076', '077'];
+            const phonePrefix = cleanPhone.substring(0, 3);
+            const isValidPrefix = validPrefixes.includes(phonePrefix);
+            
+            if (!isValidPrefix) {
+                showError(errorDiv, 'מספר טלפון לא תקין - קידומת לא מזוהה');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
                 return;
             }
             
             const lottery = getLottery();
             if (!lottery) {
-                errorDiv.classList.remove('hidden');
-                errorDiv.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>אין הגרלה פעילה כרגע';
+                showError(errorDiv, 'אין הגרלה פעילה כרגע');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
                 return;
             }
 
-            // Check for duplicate
-            const { data: existing } = await window.sb
+            const { data: existing, error: fetchError } = await window.sb
                 .from('lottery_signups')
                 .select('*')
                 .eq('lottery_id', lottery.id);
 
-            const isDuplicate = (existing || []).some(e =>
-                e.name.toLowerCase() === name.toLowerCase() ||
-                e.phone.replace(/\D/g, '') === phone.replace(/\D/g, '')
-            );
-
-            if (isDuplicate) {
-                errorDiv.classList.remove('hidden');
-                errorDiv.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>אתה/את כבר רשום/ה להגרלה!';
+            if (fetchError) {
+                console.error('Error checking existing signups:', fetchError);
+                showError(errorDiv, 'שגיאה בבדיקת נתונים, נסה שוב');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
                 return;
             }
 
-            await window.sb.from('lottery_signups').insert({
+            const existingByName = (existing || []).find(e => 
+                e.name.toLowerCase().trim() === name.toLowerCase().trim()
+            );
+            
+            const existingByPhone = (existing || []).find(e => 
+                e.phone.replace(/\D/g, '') === cleanPhone
+            );
+
+            if (existingByName) {
+                showError(errorDiv, 'שם זה כבר רשום בהגרלה!');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
+                return;
+            }
+            
+            if (existingByPhone) {
+                showError(errorDiv, 'מספר טלפון זה כבר רשום בהגרלה!');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
+                return;
+            }
+
+            const { error: insertError } = await window.sb.from('lottery_signups').insert({
                 lottery_id: lottery.id,
-                name,
-                phone,
+                name: name,
+                phone: cleanPhone,
                 enrolled_at: new Date().toISOString()
             });
             
-            // Show success
+            if (insertError) {
+                console.error('Error inserting signup:', insertError);
+                showError(errorDiv, 'שגיאה בהרשמה, נסה שוב מאוחר יותר');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
+                return;
+            }
+            
             const formContainer = document.getElementById('lottery-enroll-form');
             formContainer.innerHTML = `
                 <div class="text-center py-8">
@@ -1149,8 +1210,12 @@
                     <p class="text-text-muted">בהצלחה בהגרלה! נודיע לזוכה בערוץ הוואטסאפ</p>
                 </div>
             `;
-            
-            renderLotteryBanner();
+        }
+
+        function showError(errorDiv, message) {
+            errorDiv.classList.remove('hidden');
+            errorDiv.classList.add('flex');
+            errorDiv.innerHTML = `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>${message}</span>`;
         }
 
         // Admin Functions
